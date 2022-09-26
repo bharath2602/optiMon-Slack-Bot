@@ -1,0 +1,55 @@
+service:  optimon-slack-bot
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: us-east-1
+  stackTags: # CF stack tags
+    name: ${self:service}-cft
+  tags:
+    name: ${self:service}-lambda
+    
+package:
+  exclude:
+    - .git/**
+    - venv/**
+
+functions:
+  destroy:
+    handler: destroy.handler
+    name: destroy
+    timeout: 30
+    events:
+      - http:
+          integration: lambda
+          path: destroy
+          method: post
+    environment:
+      BOT_TOKEN: ${file(config.json):BOT_TOKEN}
+
+  cost:
+    handler: get_cost_usage.get_cost_per_user
+    name: get_cost_metrics
+    timeout: 30
+    events:
+      - http:
+          integration: lambda
+          path: get_cost
+          method: post
+    environment:
+      BOT_TOKEN: ${file(config.json):BOT_TOKEN}
+  
+  get_weekly_report:
+    handler: get_all_resources_weekly.handler
+    name: get_all_resources_weekly
+    timeout: 30
+    events:
+      - http:
+          integration: lambda
+          path: get_cost
+          method: post
+      - schedule:
+          rate: cron(20 15 ? * SAT *)
+          enabled: true
+    environment:
+      BOT_TOKEN: ${file(config.json):BOT_TOKEN}
